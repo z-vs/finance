@@ -3,6 +3,7 @@ package com.example.financeapp.data.repository
 import com.example.financeapp.data.remote.api.TransactionApi
 import com.example.financeapp.data.remote.dto.CreateTransactionRequest
 import com.example.financeapp.data.remote.dto.UpdateTransactionRequest
+import com.example.financeapp.data.remote.toUserMessage
 import com.example.financeapp.domain.model.Transaction
 import com.example.financeapp.domain.repository.TransactionRepository
 import javax.inject.Inject
@@ -15,18 +16,11 @@ class TransactionRepositoryImpl @Inject constructor(
         try {
             val response = transactionApi.getTransactions()
             Result.success(response.map {
-                Transaction(
-                    id           = it.id,
-                    categoryId   = it.categoryId,
-                    categoryName = it.categoryName,
-                    amount       = it.amount,
-                    type         = it.type,
-                    description  = it.description,
-                    date         = it.date
-                )
+                Transaction(it.id, it.categoryId, it.categoryName,
+                    it.amount, it.type, it.description, it.date)
             })
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun createTransaction(
@@ -37,19 +31,10 @@ class TransactionRepositoryImpl @Inject constructor(
             val response = transactionApi.createTransaction(
                 CreateTransactionRequest(categoryId, amount, type, description, date)
             )
-            Result.success(
-                Transaction(
-                    id           = response.id,
-                    categoryId   = response.categoryId,
-                    categoryName = response.categoryName,
-                    amount       = response.amount,
-                    type         = response.type,
-                    description  = response.description,
-                    date         = response.date
-                )
-            )
+            Result.success(Transaction(response.id, response.categoryId, response.categoryName,
+                response.amount, response.type, response.description, response.date))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun updateTransaction(
@@ -60,19 +45,10 @@ class TransactionRepositoryImpl @Inject constructor(
             val response = transactionApi.updateTransaction(
                 id, UpdateTransactionRequest(categoryId, amount, description, date)
             )
-            Result.success(
-                Transaction(
-                    id           = response.id,
-                    categoryId   = response.categoryId,
-                    categoryName = response.categoryName,
-                    amount       = response.amount,
-                    type         = response.type,
-                    description  = response.description,
-                    date         = response.date
-                )
-            )
+            Result.success(Transaction(response.id, response.categoryId, response.categoryName,
+                response.amount, response.type, response.description, response.date))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun deleteTransaction(id: Int): Result<Unit> =
@@ -80,6 +56,6 @@ class TransactionRepositoryImpl @Inject constructor(
             transactionApi.deleteTransaction(id)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 }

@@ -4,6 +4,7 @@ import com.example.financeapp.data.local.TokenStorage
 import com.example.financeapp.data.remote.api.AuthApi
 import com.example.financeapp.data.remote.dto.LoginRequest
 import com.example.financeapp.data.remote.dto.RegisterRequest
+import com.example.financeapp.data.remote.toUserMessage
 import com.example.financeapp.domain.model.User
 import com.example.financeapp.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.firstOrNull
@@ -20,7 +21,7 @@ class AuthRepositoryImpl @Inject constructor(
             tokenStorage.saveToken(response.token)
             Result.success(User(response.userId, response.email, response.token))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun login(firebaseToken: String): Result<User> =
@@ -29,7 +30,7 @@ class AuthRepositoryImpl @Inject constructor(
             tokenStorage.saveToken(response.token)
             Result.success(User(response.userId, response.email, response.token))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun logout() {

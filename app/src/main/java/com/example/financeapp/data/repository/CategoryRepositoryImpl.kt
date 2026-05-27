@@ -3,6 +3,7 @@ package com.example.financeapp.data.repository
 import com.example.financeapp.data.remote.api.CategoryApi
 import com.example.financeapp.data.remote.dto.CreateCategoryRequest
 import com.example.financeapp.data.remote.dto.UpdateCategoryRequest
+import com.example.financeapp.data.remote.toUserMessage
 import com.example.financeapp.domain.model.Category
 import com.example.financeapp.domain.repository.CategoryRepository
 import javax.inject.Inject
@@ -14,11 +15,9 @@ class CategoryRepositoryImpl @Inject constructor(
     override suspend fun getCategories(): Result<List<Category>> =
         try {
             val response = categoryApi.getCategories()
-            Result.success(response.map {
-                Category(it.id, it.name, it.type, it.icon)
-            })
+            Result.success(response.map { Category(it.id, it.name, it.type, it.icon) })
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun createCategory(
@@ -28,7 +27,7 @@ class CategoryRepositoryImpl @Inject constructor(
             val response = categoryApi.createCategory(CreateCategoryRequest(name, type, icon))
             Result.success(Category(response.id, response.name, response.type, response.icon))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun updateCategory(
@@ -38,7 +37,7 @@ class CategoryRepositoryImpl @Inject constructor(
             val response = categoryApi.updateCategory(id, UpdateCategoryRequest(name, type))
             Result.success(Category(response.id, response.name, response.type, response.icon))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun delete(id: Int): Result<Unit> =
@@ -46,6 +45,6 @@ class CategoryRepositoryImpl @Inject constructor(
             categoryApi.deleteCategory(id)
             Result.success(Unit)
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.toUserMessage()))
         }
 }
