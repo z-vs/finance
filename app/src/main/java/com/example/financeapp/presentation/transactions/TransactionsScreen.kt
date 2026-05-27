@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.FilterChip
+import com.example.financeapp.presentation.components.ErrorSnackbarHost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +35,13 @@ fun TransactionsScreen(
     var showAddDialog       by remember { mutableStateOf(false) }
     var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
     var filter              by remember { mutableStateOf("all") }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state) {
+        if (state is TransactionsState.Error) {
+            snackbarHostState.showSnackbar((state as TransactionsState.Error).message)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -46,6 +54,7 @@ fun TransactionsScreen(
                 }
             )
         },
+        snackbarHost = { ErrorSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Добавить")
