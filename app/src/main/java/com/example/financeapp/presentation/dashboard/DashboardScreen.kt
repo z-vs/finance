@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.financeapp.domain.model.Transaction
+import com.example.financeapp.presentation.components.ErrorSnackbarHost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +32,14 @@ fun DashboardScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state) {
+        if (state is DashboardState.Error) {
+            snackbarHostState.showSnackbar((state as DashboardState.Error).message)
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -52,6 +61,7 @@ fun DashboardScreen(
                 }
             )
         },
+        snackbarHost = { ErrorSnackbarHost(snackbarHostState) },
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
