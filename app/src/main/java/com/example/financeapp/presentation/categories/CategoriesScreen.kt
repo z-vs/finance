@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.financeapp.domain.model.Category
+import com.example.financeapp.presentation.components.ErrorSnackbarHost
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +27,13 @@ fun CategoriesScreen(
     val state              by viewModel.state.collectAsState()
     var showAddDialog      by remember { mutableStateOf(false) }
     var editingCategory    by remember { mutableStateOf<Category?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state) {
+        if (state is CategoriesState.Error) {
+            snackbarHostState.showSnackbar((state as CategoriesState.Error).message)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -38,6 +46,7 @@ fun CategoriesScreen(
                 }
             )
         },
+        snackbarHost = { ErrorSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Добавить")
