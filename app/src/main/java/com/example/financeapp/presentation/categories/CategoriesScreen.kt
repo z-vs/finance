@@ -156,6 +156,7 @@ fun AddCategoryDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("expense") }
+    var icon by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
