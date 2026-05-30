@@ -9,7 +9,6 @@ class CreateCategoryUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         name: String,
-        type: String,
-        icon: String? = null
-    ): Result<Category> = categoryRepository.createCategory(name, type, icon)
+        type: String
+    ): Result<Category> = categoryRepository.createCategory(name, type)
 }
