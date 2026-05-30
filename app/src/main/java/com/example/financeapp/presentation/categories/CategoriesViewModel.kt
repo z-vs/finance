@@ -41,9 +41,9 @@ class CategoriesViewModel @Inject constructor(
         }
     }
 
-    fun createCategory(name: String, type: String, icon: String? = null) {
+    fun createCategory(name: String, type: String) {
         viewModelScope.launch {
-            createCategoryUseCase(name, type, icon)
+            createCategoryUseCase(name, type)
                 .onSuccess { loadCategories() }
                 .onFailure { _state.value = CategoriesState.Error(it.message ?: "Error") }
         }
