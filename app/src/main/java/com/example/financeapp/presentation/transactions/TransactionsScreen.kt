@@ -19,27 +19,53 @@ import com.example.financeapp.domain.model.Category
 import com.example.financeapp.domain.model.Transaction
 import com.example.financeapp.presentation.categories.CategoriesState
 import com.example.financeapp.presentation.categories.CategoriesViewModel
-import java.text.SimpleDateFormat
-import java.util.*
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.FilterChip
 import com.example.financeapp.presentation.components.ErrorSnackbarHost
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionsScreen(
     onBack: () -> Unit,
-    viewModel: TransactionsViewModel = hiltViewModel()
+    onTransactionClick: (Transaction) -> Unit = {},
+    viewModel: TransactionsViewModel = hiltViewModel(),
+    categoriesViewModel: CategoriesViewModel = hiltViewModel()
 ) {
-    val state               by viewModel.state.collectAsState()
-    var showAddDialog       by remember { mutableStateOf(false) }
-    var selectedTransaction by remember { mutableStateOf<Transaction?>(null) }
-    var filter              by remember { mutableStateOf("all") }
+    val state           by viewModel.state.collectAsState()
+    val categoriesState by categoriesViewModel.state.collectAsState()
+
+    TransactionsScreenContent(
+        state              = state,
+        categoriesState    = categoriesState,
+        onBack             = onBack,
+        onTransactionClick = onTransactionClick,
+        onDelete           = { viewModel.deleteTransaction(it) },
+        onCreate           = { categoryId, amount, type, description ->
+            viewModel.createTransaction(
+                categoryId  = categoryId,
+                amount      = amount,
+                type        = type,
+                description = description,
+                date        = System.currentTimeMillis()
+            )
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TransactionsScreenContent(
+    state: TransactionsState,
+    categoriesState: CategoriesState = CategoriesState.Loading,
+    onBack: () -> Unit,
+    onTransactionClick: (Transaction) -> Unit = {},
+    onDelete: (Int) -> Unit,
+    onCreate: (Int, Double, String, String?) -> Unit
+) {
+    var showAddDialog    by remember { mutableStateOf(false) }
+    var filter           by remember { mutableStateOf("all") }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state) {
         if (state is TransactionsState.Error) {
-            snackbarHostState.showSnackbar((state as TransactionsState.Error).message)
+            snackbarHostState.showSnackbar(state.message)
         }
     }
 
@@ -54,46 +80,26 @@ fun TransactionsScreen(
                 }
             )
         },
-        snackbarHost = { ErrorSnackbarHost(snackbarHostState) },
+        snackbarHost         = { ErrorSnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { showAddDialog = true }) {
                 Icon(Icons.Default.Add, contentDescription = "Добавить")
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             Row(
-                modifier            = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                modifier              = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(
-                    selected = filter == "all",
-                    onClick  = { filter = "all" },
-                    label    = { Text("Все") }
-                )
-                FilterChip(
-                    selected = filter == "income",
-                    onClick  = { filter = "income" },
-                    label    = { Text("Доходы") }
-                )
-                FilterChip(
-                    selected = filter == "expense",
-                    onClick  = { filter = "expense" },
-                    label    = { Text("Расходы") }
-                )
+                FilterChip(selected = filter == "all",     onClick = { filter = "all" },     label = { Text("Все") })
+                FilterChip(selected = filter == "income",  onClick = { filter = "income" },  label = { Text("Доходы") })
+                FilterChip(selected = filter == "expense", onClick = { filter = "expense" }, label = { Text("Расходы") })
             }
 
             when (val s = state) {
                 is TransactionsState.Loading -> {
-                    Box(Modifier.fillMaxSize(), Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    Box(Modifier.fillMaxSize(), Alignment.Center) { CircularProgressIndicator() }
                 }
                 is TransactionsState.Error -> {
                     Box(Modifier.fillMaxSize(), Alignment.Center) {
@@ -106,30 +112,21 @@ fun TransactionsScreen(
                         "expense" -> s.transactions.filter { it.type == "expense" }
                         else      -> s.transactions
                     }
-
                     if (filtered.isEmpty()) {
-                        Box(
-                            modifier         = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text  = "Нет транзакций",
-                                color = MaterialTheme.colorScheme.outline
-                            )
+                        Box(Modifier.fillMaxSize(), Alignment.Center) {
+                            Text("Нет транзакций", color = MaterialTheme.colorScheme.outline)
                         }
                     } else {
                         LazyColumn(
-                            modifier            = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
+                            modifier            = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             contentPadding      = PaddingValues(vertical = 8.dp)
                         ) {
                             items(filtered) { transaction ->
                                 TransactionCard(
                                     transaction = transaction,
-                                    onDelete    = { viewModel.deleteTransaction(transaction.id) },
-                                    onClick     = { selectedTransaction = transaction }
+                                    onClick     = { onTransactionClick(transaction) },
+                                    onDelete    = { onDelete(transaction.id) }
                                 )
                             }
                         }
@@ -141,27 +138,11 @@ fun TransactionsScreen(
 
     if (showAddDialog) {
         AddTransactionDialog(
-            onDismiss = { showAddDialog = false },
-            onConfirm = { categoryId, amount, type, description ->
-                viewModel.createTransaction(
-                    categoryId  = categoryId,
-                    amount      = amount,
-                    type        = type,
-                    description = description,
-                    date        = System.currentTimeMillis()
-                )
+            categoriesState = categoriesState,
+            onDismiss       = { showAddDialog = false },
+            onConfirm       = { categoryId, amount, type, description ->
+                onCreate(categoryId, amount, type, description)
                 showAddDialog = false
-            }
-        )
-    }
-
-    selectedTransaction?.let { transaction ->
-        TransactionDetailDialog(
-            transaction = transaction,
-            onDismiss   = { selectedTransaction = null },
-            onDelete    = {
-                viewModel.deleteTransaction(transaction.id)
-                selectedTransaction = null
             }
         )
     }
@@ -170,8 +151,8 @@ fun TransactionsScreen(
 @Composable
 fun TransactionCard(
     transaction: Transaction,
-    onDelete: () -> Unit,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -179,17 +160,12 @@ fun TransactionCard(
             .clickable { onClick() }
     ) {
         Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier              = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text  = transaction.categoryName,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(transaction.categoryName, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     text  = if (transaction.type == "income") "Доход" else "Расход",
                     style = MaterialTheme.typography.labelSmall,
@@ -197,80 +173,17 @@ fun TransactionCard(
                 )
             }
             Text(
-                text  = if (transaction.type == "income")
-                    "+%.2f ₽".format(transaction.amount)
-                else
-                    "-%.2f ₽".format(transaction.amount),
+                text  = if (transaction.type == "income") "+%.2f ₽".format(transaction.amount)
+                else "-%.2f ₽".format(transaction.amount),
                 color = if (transaction.type == "income") Color(0xFF2E7D32) else Color(0xFFC62828),
                 style = MaterialTheme.typography.titleMedium
             )
             IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Удалить",
-                    tint               = MaterialTheme.colorScheme.error
-                )
+                Icon(Icons.Default.Delete, contentDescription = "Удалить",
+                    tint = MaterialTheme.colorScheme.error)
             }
         }
     }
-}
-
-@Composable
-fun TransactionDetailDialog(
-    transaction: Transaction,
-    onDismiss: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Детали транзакции") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Категория:", style = MaterialTheme.typography.labelMedium)
-                    Text(transaction.categoryName, style = MaterialTheme.typography.bodyMedium)
-                }
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Тип:", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        text  = if (transaction.type == "income") "Доход" else "Расход",
-                        color = if (transaction.type == "income") Color(0xFF2E7D32) else Color(0xFFC62828)
-                    )
-                }
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Сумма:", style = MaterialTheme.typography.labelMedium)
-                    Text(
-                        text  = if (transaction.type == "income")
-                            "+%.2f ₽".format(transaction.amount)
-                        else
-                            "-%.2f ₽".format(transaction.amount),
-                        color = if (transaction.type == "income") Color(0xFF2E7D32) else Color(0xFFC62828),
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-                if (!transaction.description.isNullOrBlank()) {
-                    Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                        Text("Описание:", style = MaterialTheme.typography.labelMedium)
-                        Text(transaction.description, style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-                Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                    Text("Дата:", style = MaterialTheme.typography.labelMedium)
-                    Text(dateFormat.format(Date(transaction.date)), style = MaterialTheme.typography.bodySmall)
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDelete) {
-                Text("Удалить", color = MaterialTheme.colorScheme.error)
-            }
-        }
-    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -278,9 +191,8 @@ fun TransactionDetailDialog(
 fun AddTransactionDialog(
     onDismiss: () -> Unit,
     onConfirm: (Int, Double, String, String?) -> Unit,
-    viewModel: CategoriesViewModel = hiltViewModel()
+    categoriesState: CategoriesState = CategoriesState.Loading
 ) {
-    val categoriesState  by viewModel.state.collectAsState()
     var amount           by remember { mutableStateOf("") }
     var description      by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<Category?>(null) }
@@ -315,9 +227,7 @@ fun AddTransactionDialog(
                         readOnly      = true,
                         label         = { Text("Категория") },
                         trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier      = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
+                        modifier      = Modifier.fillMaxWidth().menuAnchor()
                     )
                     ExposedDropdownMenu(
                         expanded         = expanded,
@@ -333,23 +243,13 @@ fun AddTransactionDialog(
                                 } else {
                                     s.categories.forEach { category ->
                                         DropdownMenuItem(
-                                            text    = {
-                                                Text("${category.name} (${if (category.type == "income") "Доход" else "Расход"})")
-                                            },
-                                            onClick = {
-                                                selectedCategory = category
-                                                expanded = false
-                                            }
+                                            text    = { Text("${category.name} (${if (category.type == "income") "Доход" else "Расход"})") },
+                                            onClick = { selectedCategory = category; expanded = false }
                                         )
                                     }
                                 }
                             }
-                            else -> {
-                                DropdownMenuItem(
-                                    text    = { Text("Загрузка...") },
-                                    onClick = {}
-                                )
-                            }
+                            else -> DropdownMenuItem(text = { Text("Загрузка...") }, onClick = {})
                         }
                     }
                 }
@@ -359,12 +259,7 @@ fun AddTransactionDialog(
             TextButton(
                 onClick = {
                     val cat = selectedCategory ?: return@TextButton
-                    onConfirm(
-                        cat.id,
-                        amount.toDoubleOrNull() ?: 0.0,
-                        cat.type,
-                        description.ifBlank { null }
-                    )
+                    onConfirm(cat.id, amount.toDoubleOrNull() ?: 0.0, cat.type, description.ifBlank { null })
                 },
                 enabled = selectedCategory != null && amount.isNotBlank()
             ) { Text("Добавить") }
