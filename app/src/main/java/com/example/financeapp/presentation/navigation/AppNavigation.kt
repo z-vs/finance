@@ -9,14 +9,21 @@ import com.example.financeapp.presentation.auth.LoginScreen
 import com.example.financeapp.presentation.auth.RegisterScreen
 import com.example.financeapp.presentation.dashboard.DashboardScreen
 import com.example.financeapp.presentation.transactions.TransactionsScreen
+import com.example.financeapp.presentation.transactions.TransactionDetailScreen
 import com.example.financeapp.presentation.categories.CategoriesScreen
+import com.example.financeapp.domain.model.Transaction
 
 sealed class Screen(val route: String) {
-    object Login        : Screen("login")
-    object Register     : Screen("register")
-    object Dashboard    : Screen("dashboard")
-    object Transactions : Screen("transactions")
-    object Categories   : Screen("categories")
+    object Login              : Screen("login")
+    object Register           : Screen("register")
+    object Dashboard          : Screen("dashboard")
+    object Transactions       : Screen("transactions")
+    object TransactionDetail  : Screen("transaction_detail")
+    object Categories         : Screen("categories")
+}
+
+object TransactionHolder {
+    var selected: Transaction? = null
 }
 
 @Composable
@@ -64,8 +71,22 @@ fun AppNavigation(
 
         composable(Screen.Transactions.route) {
             TransactionsScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onTransactionClick = { transaction ->
+                    TransactionHolder.selected = transaction
+                    navController.navigate(Screen.TransactionDetail.route)
+                }
             )
+        }
+
+        composable(Screen.TransactionDetail.route) {
+            val transaction = TransactionHolder.selected
+            if (transaction != null) {
+                TransactionDetailScreen(
+                    transaction = transaction,
+                    onBack      = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Screen.Categories.route) {
