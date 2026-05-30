@@ -15,17 +15,17 @@ class CategoryRepositoryImpl @Inject constructor(
     override suspend fun getCategories(): Result<List<Category>> =
         try {
             val response = categoryApi.getCategories()
-            Result.success(response.map { Category(it.id, it.name, it.type, it.icon) })
+            Result.success(response.map { Category(it.id, it.name, it.type) })
         } catch (e: Exception) {
             Result.failure(Exception(e.toUserMessage()))
         }
 
     override suspend fun createCategory(
-        name: String, type: String, icon: String?
+        name: String, type: String
     ): Result<Category> =
         try {
-            val response = categoryApi.createCategory(CreateCategoryRequest(name, type, icon))
-            Result.success(Category(response.id, response.name, response.type, response.icon))
+            val response = categoryApi.createCategory(CreateCategoryRequest(name, type))
+            Result.success(Category(response.id, response.name, response.type))
         } catch (e: Exception) {
             Result.failure(Exception(e.toUserMessage()))
         }
@@ -35,7 +35,7 @@ class CategoryRepositoryImpl @Inject constructor(
     ): Result<Category> =
         try {
             val response = categoryApi.updateCategory(id, UpdateCategoryRequest(name, type))
-            Result.success(Category(response.id, response.name, response.type, response.icon))
+            Result.success(Category(response.id, response.name, response.type))
         } catch (e: Exception) {
             Result.failure(Exception(e.toUserMessage()))
         }
