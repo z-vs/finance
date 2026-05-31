@@ -18,20 +18,42 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.financeapp.domain.model.Category
 import com.example.financeapp.presentation.components.ErrorSnackbarHost
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(
     onBack: () -> Unit,
     viewModel: CategoriesViewModel = hiltViewModel()
 ) {
-    val state              by viewModel.state.collectAsState()
-    var showAddDialog      by remember { mutableStateOf(false) }
-    var editingCategory    by remember { mutableStateOf<Category?>(null) }
+    val state by viewModel.state.collectAsState()
+
+    LaunchedEffect(state) {
+        if (state is CategoriesState.Error) {}
+    }
+
+    CategoriesScreenContent(
+        state          = state,
+        onBack         = onBack,
+        onDelete       = { viewModel.deleteCategory(it) },
+        onCreate       = { name, type -> viewModel.createCategory(name, type) },
+        onUpdate       = { id, name, type -> viewModel.updateCategory(id, name, type) }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoriesScreenContent(
+    state: CategoriesState,
+    onBack: () -> Unit,
+    onDelete: (Int) -> Unit,
+    onCreate: (String, String) -> Unit,
+    onUpdate: (Int, String, String) -> Unit
+) {
+    var showAddDialog   by remember { mutableStateOf(false) }
+    var editingCategory by remember { mutableStateOf<Category?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state) {
         if (state is CategoriesState.Error) {
-            snackbarHostState.showSnackbar((state as CategoriesState.Error).message)
+            snackbarHostState.showSnackbar(state.message)
         }
     }
 
@@ -105,18 +127,12 @@ fun CategoriesScreen(
                                         )
                                     }
                                     IconButton(onClick = { editingCategory = category }) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Редактировать",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                        Icon(Icons.Default.Edit, contentDescription = "Редактировать",
+                                            tint = MaterialTheme.colorScheme.primary)
                                     }
-                                    IconButton(onClick = { viewModel.deleteCategory(category.id) }) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Удалить",
-                                            tint = MaterialTheme.colorScheme.error
-                                        )
+                                    IconButton(onClick = { onDelete(category.id) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Удалить",
+                                            tint = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
@@ -131,7 +147,7 @@ fun CategoriesScreen(
         AddCategoryDialog(
             onDismiss = { showAddDialog = false },
             onConfirm = { name, type ->
-                viewModel.createCategory(name, type)
+                onCreate(name, type)
                 showAddDialog = false
             }
         )
@@ -142,7 +158,7 @@ fun CategoriesScreen(
             category  = category,
             onDismiss = { editingCategory = null },
             onConfirm = { name, type ->
-                viewModel.updateCategory(category.id, name, type)
+                onUpdate(category.id, name, type)
                 editingCategory = null
             }
         )
@@ -156,7 +172,6 @@ fun AddCategoryDialog(
 ) {
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf("expense") }
-    var icon by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
