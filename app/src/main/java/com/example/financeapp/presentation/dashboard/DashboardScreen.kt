@@ -20,7 +20,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.financeapp.domain.model.Transaction
 import com.example.financeapp.presentation.components.ErrorSnackbarHost
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     onTransactionsClick: () -> Unit,
@@ -29,31 +28,45 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
-    var showLogoutDialog by remember { mutableStateOf(false) }
-
     val lifecycleOwner = LocalLifecycleOwner.current
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(state) {
-        if (state is DashboardState.Error) {
-            snackbarHostState.showSnackbar((state as DashboardState.Error).message)
-        }
-    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                viewModel.loadDashboard()
-            }
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.loadDashboard()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    DashboardScreenContent(
+        state               = state,
+        onTransactionsClick = onTransactionsClick,
+        onCategoriesClick   = onCategoriesClick,
+        onLogout            = { viewModel.logout(); onLogout() }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreenContent(
+    state: DashboardState,
+    onTransactionsClick: () -> Unit,
+    onCategoriesClick: () -> Unit,
+    onLogout: () -> Unit
+) {
+    var showLogoutDialog  by remember { mutableStateOf(false) }
+    val snackbarHostState  = remember { SnackbarHostState() }
+
+    LaunchedEffect(state) {
+        if (state is DashboardState.Error) {
+            snackbarHostState.showSnackbar(state.message)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Главная") },
+                title   = { Text("Главная") },
                 actions = {
                     IconButton(onClick = { showLogoutDialog = true }) {
                         Icon(Icons.Default.ExitToApp, contentDescription = "Выйти")
@@ -120,7 +133,6 @@ fun DashboardScreen(
                             }
                         }
                     }
-
                     item {
                         Row(
                             modifier              = Modifier.fillMaxWidth(),
@@ -128,9 +140,7 @@ fun DashboardScreen(
                         ) {
                             Card(
                                 modifier = Modifier.weight(1f),
-                                colors   = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFE8F5E9)
-                                )
+                                colors   = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9))
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text("Доходы", style = MaterialTheme.typography.labelMedium)
@@ -143,9 +153,7 @@ fun DashboardScreen(
                             }
                             Card(
                                 modifier = Modifier.weight(1f),
-                                colors   = CardDefaults.cardColors(
-                                    containerColor = Color(0xFFFFEBEE)
-                                )
+                                colors   = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE))
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     Text("Расходы", style = MaterialTheme.typography.labelMedium)
@@ -158,18 +166,12 @@ fun DashboardScreen(
                             }
                         }
                     }
-
                     item {
                         ExpenseChart(transactions = s.data.allTransactions)
                     }
-
                     item {
-                        Text(
-                            text  = "Последние транзакции",
-                            style = MaterialTheme.typography.titleMedium
-                        )
+                        Text("Последние транзакции", style = MaterialTheme.typography.titleMedium)
                     }
-
                     if (s.data.recentTransactions.isEmpty()) {
                         item {
                             Box(
@@ -200,7 +202,6 @@ fun DashboardScreen(
             confirmButton    = {
                 TextButton(onClick = {
                     showLogoutDialog = false
-                    viewModel.logout()
                     onLogout()
                 }) { Text("Выйти", color = MaterialTheme.colorScheme.error) }
             },
@@ -215,17 +216,12 @@ fun DashboardScreen(
 fun TransactionItem(transaction: Transaction) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier              = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier              = Modifier.fillMaxWidth().padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically
         ) {
             Column {
-                Text(
-                    text  = transaction.categoryName,
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Text(transaction.categoryName, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     text  = if (transaction.type == "income") "Доход" else "Расход",
                     style = MaterialTheme.typography.labelSmall,
@@ -241,6 +237,5 @@ fun TransactionItem(transaction: Transaction) {
                 style = MaterialTheme.typography.titleMedium
             )
         }
-
     }
 }
