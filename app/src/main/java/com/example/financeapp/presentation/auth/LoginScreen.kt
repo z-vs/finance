@@ -18,10 +18,7 @@ fun LoginScreen(
     onRegisterClick: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    val state            by viewModel.state.collectAsState()
-    var email            by remember { mutableStateOf("") }
-    var password         by remember { mutableStateOf("") }
-    val snackbarHostState = remember { SnackbarHostState() }
+    val state by viewModel.state.collectAsState()
 
     LaunchedEffect(state) {
         when (val s = state) {
@@ -30,10 +27,32 @@ fun LoginScreen(
                 onLoginSuccess()
             }
             is AuthState.Error -> {
-                snackbarHostState.showSnackbar(s.message)
                 viewModel.resetState()
             }
             else -> {}
+        }
+    }
+
+    LoginScreenContent(
+        state           = state,
+        onRegisterClick = onRegisterClick,
+        onLogin         = { email, password -> viewModel.login(email, password) }
+    )
+}
+
+@Composable
+fun LoginScreenContent(
+    state: AuthState,
+    onRegisterClick: () -> Unit,
+    onLogin: (String, String) -> Unit
+) {
+    var email             by remember { mutableStateOf("") }
+    var password          by remember { mutableStateOf("") }
+    val snackbarHostState  = remember { SnackbarHostState() }
+
+    LaunchedEffect(state) {
+        if (state is AuthState.Error) {
+            snackbarHostState.showSnackbar(state.message)
         }
     }
 
@@ -71,7 +90,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(24.dp))
             Button(
-                onClick  = { viewModel.login(email, password) },
+                onClick  = { onLogin(email, password) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled  = state !is AuthState.Loading && email.isNotBlank() && password.isNotBlank()
             ) {
