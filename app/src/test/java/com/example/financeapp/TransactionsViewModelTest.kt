@@ -56,9 +56,7 @@ class TransactionsViewModelTest {
         )
 
         viewModel.state.test {
-            // первый emit — Loading (из init)
             assertTrue(awaitItem() is TransactionsState.Loading)
-            // после выполнения корутины — Success
             testDispatcher.scheduler.advanceUntilIdle()
             val success = awaitItem() as TransactionsState.Success
             assertEquals(list, success.transactions)
