@@ -19,17 +19,30 @@ fun RegisterScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    var email           by remember { mutableStateOf("") }
-    var password        by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordError   by remember { mutableStateOf<String?>(null) }
-
     LaunchedEffect(state) {
         if (state is AuthState.Success) {
             viewModel.resetState()
             onRegisterSuccess()
         }
     }
+
+    RegisterScreenContent(
+        state             = state,
+        onLoginClick      = onLoginClick,
+        onRegister        = { email, password -> viewModel.register(email, password) }
+    )
+}
+
+@Composable
+fun RegisterScreenContent(
+    state: AuthState,
+    onLoginClick: () -> Unit,
+    onRegister: (String, String) -> Unit
+) {
+    var email           by remember { mutableStateOf("") }
+    var password        by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordError   by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier            = Modifier
@@ -42,9 +55,7 @@ fun RegisterScreen(
             text  = "Регистрация",
             style = MaterialTheme.typography.headlineMedium
         )
-
         Spacer(modifier = Modifier.height(32.dp))
-
         OutlinedTextField(
             value           = email,
             onValueChange   = { email = it },
@@ -52,9 +63,7 @@ fun RegisterScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
             modifier        = Modifier.fillMaxWidth()
         )
-
         Spacer(modifier = Modifier.height(12.dp))
-
         OutlinedTextField(
             value                = password,
             onValueChange        = { password = it },
@@ -63,9 +72,7 @@ fun RegisterScreen(
             keyboardOptions      = KeyboardOptions(keyboardType = KeyboardType.Password),
             modifier             = Modifier.fillMaxWidth()
         )
-
         Spacer(modifier = Modifier.height(12.dp))
-
         OutlinedTextField(
             value                = confirmPassword,
             onValueChange        = { confirmPassword = it },
@@ -76,24 +83,21 @@ fun RegisterScreen(
             supportingText       = { passwordError?.let { Text(it) } },
             modifier             = Modifier.fillMaxWidth()
         )
-
         Spacer(modifier = Modifier.height(24.dp))
-
         if (state is AuthState.Error) {
             Text(
-                text  = (state as AuthState.Error).message,
+                text  = state.message,
                 color = MaterialTheme.colorScheme.error
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
-
         Button(
             onClick = {
                 if (password != confirmPassword) {
                     passwordError = "Пароли не совпадают"
                 } else {
                     passwordError = null
-                    viewModel.register(email, password)
+                    onRegister(email, password)
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -108,9 +112,7 @@ fun RegisterScreen(
                 Text("Зарегистрироваться")
             }
         }
-
         Spacer(modifier = Modifier.height(12.dp))
-
         TextButton(onClick = onLoginClick) {
             Text("Уже есть аккаунт? Войти")
         }
